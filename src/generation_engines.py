@@ -138,15 +138,37 @@ class HuggingFaceEngine(GenerationEngine):
             self.processor = None
             self.is_vision = False
         
-        # Initialize pipeline
+        # For vision models, load model directly for better control
         if self.is_vision:
-            self.pipeline = pipeline(
-                "image-to-text" if "vl" in model_name.lower() or "vision" in model_name.lower() else "text-generation",
-                model=model_name,
-                device_map="auto",
-                trust_remote_code=True
-            )
+            try:
+                from transformers import AutoModelForVision2Seq
+                self.model = AutoModelForVision2Seq.from_pretrained(
+                    model_name,
+                    device_map="auto",
+                    trust_remote_code=True
+                )
+                self.pipeline = None  # Don't use pipeline for vision models
+            except:
+                # Fallback to pipeline if direct loading fails
+                try:
+                    from transformers import AutoModelForImageTextToText
+                    self.model = AutoModelForImageTextToText.from_pretrained(
+                        model_name,
+                        device_map="auto",
+                        trust_remote_code=True
+                    )
+                    self.pipeline = None
+                except:
+                    # Last resort: use pipeline
+                    self.model = None
+                    self.pipeline = pipeline(
+                        "image-to-text",
+                        model=model_name,
+                        device_map="auto",
+                        trust_remote_code=True
+                    )
         else:
+            self.model = None
             self.pipeline = pipeline(
                 "text-generation",
                 model=model_name,
@@ -163,6 +185,21 @@ class HuggingFaceEngine(GenerationEngine):
         """Generate using HuggingFace pipeline."""
         params = {**self.generation_params, **kwargs}
         
+        # Convert max_tokens to max_new_tokens (HuggingFace uses max_new_tokens)
+        if 'max_tokens' in params:
+            params['max_new_tokens'] = params.pop('max_tokens')
+        
+        # Valid generation parameters for HuggingFace models
+        valid_gen_params = {
+            'max_new_tokens', 'max_length', 'min_length', 'do_sample',
+            'temperature', 'top_p', 'top_k', 'num_beams', 'num_return_sequences',
+            'repetition_penalty', 'length_penalty', 'no_repeat_ngram_size',
+            'early_stopping', 'pad_token_id', 'eos_token_id', 'bos_token_id'
+        }
+        
+        # Filter params to only include valid generation parameters
+        gen_params = {k: v for k, v in params.items() if k in valid_gen_params}
+        
         if self.is_vision and image:
             # Handle image
             if isinstance(image, str):
@@ -172,26 +209,31 @@ class HuggingFaceEngine(GenerationEngine):
                 else:
                     raise ValueError(f"Image path does not exist: {image}")
             
-            # Use processor for vision models
-            if self.processor:
+            # Use processor and model directly for vision models
+            if self.processor and self.model:
                 inputs = self.processor(images=image, text=prompt, return_tensors="pt")
                 # Move to same device as model
-                device = next(self.pipeline.model.parameters()).device
+                device = next(self.model.parameters()).device
                 inputs = {k: v.to(device) for k, v in inputs.items()}
                 
-                # Generate
-                outputs = self.pipeline.model.generate(**inputs, **params)
+                # Generate with filtered parameters
+                outputs = self.model.generate(**inputs, **gen_params)
                 generated_text = self.processor.decode(outputs[0], skip_special_tokens=True)
+                # Remove the input prompt from the generated text if present
+                if prompt in generated_text:
+                    generated_text = generated_text.replace(prompt, "").strip()
                 return generated_text
-            else:
+            elif self.pipeline:
                 # Fallback to pipeline
-                result = self.pipeline(image, prompt=prompt, **params)
+                result = self.pipeline(image, prompt=prompt, **gen_params)
                 if isinstance(result, list):
                     return result[0].get('generated_text', str(result[0]))
                 return str(result)
+            else:
+                raise ValueError("Neither model nor pipeline available for vision generation")
         else:
             # Text-only generation
-            result = self.pipeline(prompt, **params)
+            result = self.pipeline(prompt, **gen_params)
             if isinstance(result, list) and len(result) > 0:
                 generated_text = result[0].get('generated_text', '')
                 # Remove prompt from generated text if it's included
