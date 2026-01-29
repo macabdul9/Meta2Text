@@ -150,7 +150,7 @@ python main.py \
     --generation_engine hf \
     --generation_model Qwen/Qwen2-VL-2B-Instruct \
     --metadata '{"object": "amphora", "period": "Greek"}' \
-    --image_path artifact.jpg \
+    --image_path assets/artifact.jpg \
     --generation_method vlm_hybrid
 ```
 
