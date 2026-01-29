@@ -147,7 +147,7 @@ class HuggingFaceEngine(GenerationEngine):
                 from transformers import Qwen2VLForConditionalGeneration
                 self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                     model_name,
-                    torch_dtype="auto",
+                    dtype="auto",
                     device_map="auto",
                     trust_remote_code=True
                 )
@@ -269,9 +269,10 @@ class HuggingFaceEngine(GenerationEngine):
                 generated_ids = self.model.generate(**inputs, **gen_params)
                 
                 # Trim input_ids from generated_ids
+                input_ids = inputs['input_ids']
                 generated_ids_trimmed = [
                     out_ids[len(in_ids):] 
-                    for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+                    for in_ids, out_ids in zip(input_ids, generated_ids)
                 ]
                 
                 # Decode
