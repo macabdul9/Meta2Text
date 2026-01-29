@@ -1,0 +1,14 @@
+# Core dependencies
+openai>=1.0.0
+transformers>=4.30.0
+torch>=2.0.0
+datasets>=2.14.0
+Pillow>=10.0.0
+
+# vLLM (optional, for vLLM engine)
+# vllm>=0.2.0  # Uncomment if using vLLM engine
+
+# Additional dependencies
+accelerate>=0.20.0
+sentencepiece>=0.1.99
+protobuf>=3.20.0
