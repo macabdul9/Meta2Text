@@ -337,23 +337,26 @@ class VLLMEngine(GenerationEngine):
         self.model_name = model_name
         self.generation_params = generation_params
         
-        # Initialize vLLM
-        # Note: vLLM doesn't natively support vision models, so we'll use it for text-only
-        # For vision models, we might need to use a different approach
-        self.llm = LLM(
-            model=model_name,
-            trust_remote_code=True,
-            gpu_memory_utilization=0.9
-        )
-        
         # Check if vision model (would need special handling)
         self.is_vision = "vl" in model_name.lower() or "vision" in model_name.lower()
+        
+        # Initialize vLLM
+        # Note: vLLM supports some vision models, but they need more memory
+        # Use lower GPU memory utilization for vision models
+        gpu_memory_util = 0.5 if self.is_vision else 0.9
+        
         if self.is_vision:
             import warnings
             warnings.warn(
-                f"vLLM may not fully support vision model {model_name}. "
-                "Consider using 'hf' engine for vision models."
+                f"vLLM vision model support may be limited for {model_name}. "
+                "Consider using 'hf' engine for better vision model support."
             )
+        
+        self.llm = LLM(
+            model=model_name,
+            trust_remote_code=True,
+            gpu_memory_utilization=gpu_memory_util
+        )
     
     def generate(
         self,
@@ -366,23 +369,57 @@ class VLLMEngine(GenerationEngine):
         
         params = {**self.generation_params, **kwargs}
         
-        # vLLM doesn't handle images directly in the same way
-        # For vision models, we'd need to preprocess the image and include it in the prompt
-        # For now, we'll use text-only generation
-        if image:
-            import warnings
-            warnings.warn("vLLM engine: image input is not fully supported, using text-only generation")
+        # Handle image for vision models
+        temp_file_path = None
+        if self.is_vision and image:
+            # vLLM vision models use multi_modal_data format
+            if isinstance(image, str):
+                from pathlib import Path
+                if not Path(image).exists():
+                    raise ValueError(f"Image path does not exist: {image}")
+                image_path = image
+            else:
+                # PIL Image - save temporarily
+                import tempfile
+                import os
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
+                image.save(temp_file.name, format='JPEG')
+                image_path = temp_file.name
+                temp_file.close()
+                temp_file_path = image_path
+            
+            # Format for vLLM vision models
+            multimodal_prompt = {
+                "prompt": prompt,
+                "multi_modal_data": {"image": image_path}
+            }
+            prompt_for_llm = multimodal_prompt
+        else:
+            if image:
+                import warnings
+                warnings.warn("vLLM engine: image input provided but model is not a vision model, using text-only generation")
+            prompt_for_llm = prompt
         
         sampling_params = SamplingParams(
             temperature=params.get('temperature', 0.7),
             top_p=params.get('top_p', 1.0),
             top_k=params.get('top_k', -1),
-            max_tokens=params.get('max_tokens', 512),
+            max_tokens=params.get('max_tokens', params.get('max_new_tokens', 512)),
             stop=params.get('stop', None)
         )
         
-        outputs = self.llm.generate([prompt], sampling_params)
-        return outputs[0].outputs[0].text
+        outputs = self.llm.generate([prompt_for_llm], sampling_params)
+        result = outputs[0].outputs[0].text
+        
+        # Clean up temporary file if created
+        if temp_file_path:
+            import os
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
+        
+        return result
 
 
 class GenerationEngineFactory:
