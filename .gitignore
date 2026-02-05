@@ -59,3 +59,5 @@ datasets/
 # Environment variables
 .env
 .env.local
+*.pdf
+2407.08521v2.pdf
