@@ -1,0 +1,17 @@
+[
+  {
+    "metadata": {
+      "object": "ceramic pot",
+      "period": "Roman",
+      "condition": "intact"
+    },
+    "image_path": "assets/artifact.jpg",
+    "hierarchy": {
+      "level_1": "coin",
+      "level_2": "Roman coin",
+      "level_3": "an ancient Roman coin with a circular shape and a greenish patina",
+      "level_4": "a circular, round, Roman coin with a rough, textured surface covered in greenish corrosion and reddish patches, lying on a flat surface",
+      "level_5": "a circular, round, Roman coin with a greenish patina and red corrosion, likely made of bronze, lying on a white surface with a 1cm ruler below it"
+    }
+  }
+]

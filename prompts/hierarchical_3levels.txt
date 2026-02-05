@@ -1,0 +1,16 @@
+You are generating hierarchical captions with 3 levels of detail, from general to specific.
+
+Each level should progressively add more detail:
+- Level 1: Single word or very short phrase (category)
+- Level 2: Short phrase with basic attributes (2-4 words)
+- Level 3: Complete sentence with key details
+
+Metadata to describe:
+{metadata}
+
+Output ONLY valid JSON in this exact format:
+{{
+  "level_1": "...",
+  "level_2": "...",
+  "level_3": "..."
+}}

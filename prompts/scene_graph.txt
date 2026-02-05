@@ -1,0 +1,12 @@
+Generate a scene graph description based on the following metadata:
+
+{metadata}
+
+Create a structured description that identifies:
+1. Main objects and entities
+2. Relationships between objects
+3. Attributes of each object
+4. Spatial relationships
+5. Actions or states
+
+Format the description to clearly show the hierarchical structure of the scene.

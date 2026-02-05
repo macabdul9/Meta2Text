@@ -1,0 +1,5 @@
+Generate a natural language description based on the following metadata:
+
+{metadata}
+
+Create a clear, concise description that incorporates all the provided metadata fields in a natural way.

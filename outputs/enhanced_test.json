@@ -1,0 +1,17 @@
+[
+  {
+    "metadata": {
+      "object": "ceramic pot",
+      "period": "Roman",
+      "condition": "intact"
+    },
+    "image_path": "assets/artifact.jpg",
+    "hierarchy": {
+      "level_1": "coin",
+      "level_2": "ancient Roman coin",
+      "level_3": "An ancient Roman coin with a circular shape, showing signs of corrosion and patina.",
+      "level_4": "A circular Roman coin, likely made of bronze or copper, that has been corroded with green patina and reddish-brown mineral deposits, indicating age and exposure to the elements, and is displayed against a white background with a 1 cm ruler below it.",
+      "level_5": "A circular ancient Roman coin made of corroded bronze or copper, showing significant green and reddish-brown oxidation, with a textured surface and a 1 cm scale bar below it, indicating its small size, and likely dating from the Roman Empire period; the coin appears to be in an intact condition with no visible damage or wear, and its surface texture is rough and uneven, with scattered rust and mineral deposits, and features a faint, illegible inscription or design, possibly a portrait or symbol, in the center, and is photographed on a white background with a 1 cm ruler for scale."
+    }
+  }
+]

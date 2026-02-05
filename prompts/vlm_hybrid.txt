@@ -1,0 +1,13 @@
+You are analyzing an image along with its associated metadata to create a comprehensive description.
+
+Image metadata:
+{metadata}
+
+Based on both the visual information in the image AND the provided metadata, generate a detailed description that:
+1. Describes what you see in the image
+2. Incorporates the metadata information naturally
+3. Highlights any visual features that relate to the metadata
+4. Mentions colors, textures, shapes, and other visual details
+5. Provides a cohesive narrative combining visual and metadata information
+
+Description:

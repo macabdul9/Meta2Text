@@ -345,17 +345,223 @@ class NoiseInjectionMethod(GenerationMethod):
             return self.base_method.generate(metadata, image_path)
 
 
+class HierarchicalGenerationMethod(GenerationMethod):
+    """Hierarchical caption generation with multiple levels of granularity.
+    
+    Generates captions at 5 levels from very general to very detailed,
+    inspired by the HierarCaps paper approach.
+    """
+    
+    def __init__(self, engine, num_levels: int = 5, direction: str = "bidirectional", prompt_template: str = None):
+        """
+        Initialize hierarchical generation method.
+        
+        Args:
+            engine: GenerationEngine instance
+            num_levels: Number of hierarchy levels (default: 5)
+            direction: Completion direction ('forward', 'backward', 'bidirectional')
+            prompt_template: Optional path to a custom prompt template file.
+        """
+        super().__init__(engine)
+        self.num_levels = num_levels
+        self.direction = direction
+        self.prompt_template = prompt_template
+    
+    def _create_hierarchy_prompt(self, metadata: Dict[str, Any]) -> str:
+        """Create prompt for hierarchical caption generation."""
+        metadata_str = json.dumps(metadata, indent=2)
+        
+        # Check if custom prompt template is provided
+        if hasattr(self, 'prompt_template') and self.prompt_template:
+            try:
+                with open(self.prompt_template, 'r') as f:
+                    template = f.read()
+                return template.format(num_levels=self.num_levels, metadata=metadata_str)
+            except Exception as e:
+                import warnings
+                warnings.warn(f"Failed to load custom prompt template: {e}. Using default.")
+        
+        # Default prompt with enhanced level 5 detail
+        prompt = f"""You are generating hierarchical captions with {self.num_levels} levels of detail, from very general to very specific.
+
+Each level should progressively add more detail while maintaining logical consistency:
+- Level 1: Single word or very short phrase (category/object type)
+- Level 2: Short phrase with basic attributes (2-4 words)
+- Level 3: Simple sentence with key details (one sentence)
+- Level 4: Detailed sentence with multiple attributes (one detailed sentence)
+- Level 5: Comprehensive, exhaustive description with ALL available information from the metadata and image. Include specific details about material, condition, period, measurements, colors, textures, patterns, inscriptions, provenance, and any other observable or known characteristics. This should be 2-3 detailed sentences.
+
+Example hierarchy:
+Level 1: "pet"
+Level 2: "small puppy"
+Level 3: "A small golden retriever puppy sitting on grass."
+Level 4: "A small golden retriever puppy with fluffy fur sitting on green grass in sunlight."
+Level 5: "A small golden retriever puppy, approximately 8 weeks old, with soft golden-blonde fluffy fur and dark brown eyes, sitting upright on lush green grass in bright afternoon sunlight. The puppy has a black nose, floppy ears, and appears to be looking directly at the camera with a playful expression."
+
+Metadata to describe:
+{metadata_str}
+
+IMPORTANT: Generate a hierarchy where each level logically contains and expands upon the previous level. Each level should include the core concept from previous levels plus additional details. Level 5 MUST be the most comprehensive and detailed, incorporating ALL available information.
+
+Output ONLY valid JSON in this exact format (no other text):
+{{
+  "level_1": "...",
+  "level_2": "...",
+  "level_3": "...",
+  "level_4": "...",
+  "level_5": "..."
+}}"""
+        
+        return prompt
+    
+    def _parse_hierarchy_response(self, response: str) -> Dict[str, str]:
+        """Parse JSON response from LLM into hierarchy dictionary."""
+        # Try to extract JSON from response
+        response = response.strip()
+        
+        # Remove markdown code blocks if present
+        if response.startswith("```"):
+            lines = response.split("\n")
+            # Remove first and last lines (``` markers)
+            response = "\n".join(lines[1:-1])
+            # Remove language identifier if present
+            if response.startswith("json"):
+                response = response[4:].strip()
+        
+        try:
+            hierarchy = json.loads(response)
+            
+            # Validate that all levels are present
+            for i in range(1, self.num_levels + 1):
+                level_key = f"level_{i}"
+                if level_key not in hierarchy:
+                    raise ValueError(f"Missing {level_key} in hierarchy")
+            
+            return hierarchy
+        
+        except json.JSONDecodeError as e:
+            # Fallback: try to parse line by line
+            hierarchy = {}
+            for line in response.split("\n"):
+                line = line.strip()
+                if line.startswith('"level_'):
+                    # Try to extract level_X: "value"
+                    try:
+                        key_part, value_part = line.split(":", 1)
+                        key = key_part.strip().strip('"')
+                        value = value_part.strip().strip('",')
+                        hierarchy[key] = value
+                    except:
+                        continue
+            
+            if len(hierarchy) == self.num_levels:
+                return hierarchy
+            
+            raise ValueError(f"Failed to parse hierarchy from response: {e}\nResponse: {response}")
+    
+    def _validate_hierarchy(self, hierarchy: Dict[str, str]) -> bool:
+        """Validate that hierarchy has progressive detail increase."""
+        lengths = []
+        for i in range(1, self.num_levels + 1):
+            level_key = f"level_{i}"
+            if level_key not in hierarchy:
+                return False
+            lengths.append(len(hierarchy[level_key]))
+        
+        # Check that each level is generally longer than the previous
+        # Allow some flexibility (not strictly monotonic)
+        for i in range(len(lengths) - 1):
+            # Level i+1 should generally be longer, but we allow same length
+            # or slightly shorter for natural variation
+            if lengths[i+1] < lengths[i] * 0.8:  # Allow 20% tolerance
+                return False
+        
+        return True
+    
+    def _create_json_schema(self) -> Dict[str, Any]:
+        """Create JSON schema for guided generation."""
+        properties = {}
+        required = []
+        
+        for i in range(1, self.num_levels + 1):
+            level_key = f"level_{i}"
+            properties[level_key] = {"type": "string"}
+            required.append(level_key)
+        
+        schema = {
+            "type": "object",
+            "properties": properties,
+            "required": required
+        }
+        
+        return schema
+    
+    def generate(
+        self,
+        metadata: Dict[str, Any],
+        image_path: Optional[str] = None
+    ) -> Union[str, Dict[str, str]]:
+        """
+        Generate hierarchical captions.
+        
+        Args:
+            metadata: Dictionary containing metadata
+            image_path: Optional path to image file
+            
+        Returns:
+            Dictionary with keys 'level_1' through 'level_N' containing captions,
+            or a formatted string representation
+        """
+        # Create prompt
+        prompt = self._create_hierarchy_prompt(metadata)
+        
+        # Generate using engine (guided JSON not supported in all vLLM versions)
+        response = self.engine.generate(prompt=prompt, image=image_path)
+        
+        # Parse response
+        try:
+            hierarchy = self._parse_hierarchy_response(response)
+            
+            # Validate hierarchy
+            if not self._validate_hierarchy(hierarchy):
+                import warnings
+                warnings.warn("Generated hierarchy may not have proper progressive detail increase")
+            
+            return hierarchy
+        
+        except Exception as e:
+            # Fallback: return error information
+            import warnings
+            warnings.warn(f"Failed to generate valid hierarchy: {e}. Returning raw response.")
+            
+            # Return a basic hierarchy as fallback
+            return {
+                "level_1": "artifact",
+                "level_2": str(metadata.get("object", "artifact")),
+                "level_3": f"a {metadata.get('object', 'artifact')}",
+                "level_4": f"a {metadata.get('object', 'artifact')} from the {metadata.get('period', 'past')}",
+                "level_5": json.dumps(metadata),
+                "error": str(e),
+                "raw_response": response
+            }
+
+
 class GenerationMethodFactory:
     """Factory for creating generation methods."""
     
     @staticmethod
-    def create(method_type: str, engine) -> GenerationMethod:
+    def create(method_type: str, engine, **kwargs) -> GenerationMethod:
         """
         Create a generation method.
         
         Args:
-            method_type: Type of method ('template', 'llm_expansion', 'vlm_hybrid', 'scene_graph', 'noise_injection')
+            method_type: Type of method ('template', 'llm_expansion', 'vlm_hybrid', 
+                        'scene_graph', 'noise_injection', 'hierarchical')
             engine: GenerationEngine instance
+            **kwargs: Additional parameters for specific methods
+                - num_levels: Number of hierarchy levels (for hierarchical)
+                - direction: Completion direction (for hierarchical)
+                - noise_probability: Noise injection probability (for noise_injection)
             
         Returns:
             GenerationMethod instance
@@ -369,6 +575,12 @@ class GenerationMethodFactory:
         elif method_type == "scene_graph":
             return SceneGraphMethod(engine)
         elif method_type == "noise_injection":
-            return NoiseInjectionMethod(engine)
+            noise_probability = kwargs.get('noise_probability', 0.1)
+            return NoiseInjectionMethod(engine, noise_probability=noise_probability)
+        elif method_type == "hierarchical":
+            num_levels = kwargs.get('num_levels', 5)
+            direction = kwargs.get('direction', 'bidirectional')
+            prompt_template = kwargs.get('prompt_template', None)
+            return HierarchicalGenerationMethod(engine, num_levels=num_levels, direction=direction, prompt_template=prompt_template)
         else:
             raise ValueError(f"Unknown method type: {method_type}")

@@ -1,0 +1,22 @@
+You are generating hierarchical captions for archaeological artifacts with {num_levels} levels of detail.
+
+This is specialized for cultural heritage and archaeological objects. Each level should progressively add more detail:
+- Level 1: Object category (e.g., "vessel", "tool", "ornament")
+- Level 2: Specific type with material (e.g., "ceramic bowl", "bronze sword")
+- Level 3: Type with period and basic condition (e.g., "Roman ceramic bowl in good condition")
+- Level 4: Detailed description including form, decoration, and cultural context
+- Level 5: Comprehensive archaeological description including all available information: material composition, manufacturing technique, period, cultural attribution, condition assessment, dimensions, decorative elements, inscriptions, provenance, archaeological context, and significance
+
+Metadata to describe:
+{metadata}
+
+IMPORTANT: Use proper archaeological terminology. Be precise about periods, cultures, and technical details. Level 5 should read like a museum catalog entry.
+
+Output ONLY valid JSON in this exact format:
+{{
+  "level_1": "...",
+  "level_2": "...",
+  "level_3": "...",
+  "level_4": "...",
+  "level_5": "..."
+}}

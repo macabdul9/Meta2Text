@@ -1,0 +1,29 @@
+You are generating hierarchical captions with {num_levels} levels of detail, from very general to very specific.
+
+Each level should progressively add more detail while maintaining logical consistency:
+- Level 1: Single word or very short phrase (category/object type)
+- Level 2: Short phrase with basic attributes (2-4 words)
+- Level 3: Simple sentence with key details (one sentence)
+- Level 4: Detailed sentence with multiple attributes (one detailed sentence)
+- Level 5: Comprehensive, exhaustive description with ALL available information from the metadata and image. Include specific details about material, condition, period, measurements, colors, textures, patterns, inscriptions, provenance, and any other observable or known characteristics. This should be 2-3 detailed sentences.
+
+Example hierarchy:
+Level 1: "pet"
+Level 2: "small puppy"
+Level 3: "A small golden retriever puppy sitting on grass."
+Level 4: "A small golden retriever puppy with fluffy fur sitting on green grass in sunlight."
+Level 5: "A small golden retriever puppy, approximately 8 weeks old, with soft golden-blonde fluffy fur and dark brown eyes, sitting upright on lush green grass in bright afternoon sunlight. The puppy has a black nose, floppy ears, and appears to be looking directly at the camera with a playful expression."
+
+Metadata to describe:
+{metadata}
+
+IMPORTANT: Generate a hierarchy where each level logically contains and expands upon the previous level. Each level should include the core concept from previous levels plus additional details. Level 5 MUST be the most comprehensive and detailed, incorporating ALL available information.
+
+Output ONLY valid JSON in this exact format (no other text):
+{{
+  "level_1": "...",
+  "level_2": "...",
+  "level_3": "...",
+  "level_4": "...",
+  "level_5": "..."
+}}

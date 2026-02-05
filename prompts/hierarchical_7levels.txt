@@ -1,0 +1,26 @@
+You are generating hierarchical captions with 7 levels of detail, from very general to extremely specific.
+
+Each level should progressively add more detail:
+- Level 1: Single word (category)
+- Level 2: 2-3 words (basic type)
+- Level 3: Short phrase (4-6 words)
+- Level 4: Simple sentence
+- Level 5: Detailed sentence with multiple attributes
+- Level 6: Comprehensive description (2 sentences)
+- Level 7: Exhaustive description with ALL available information including material, condition, period, measurements, colors, textures, patterns, inscriptions, provenance, and any other observable characteristics (2-3 detailed sentences)
+
+Metadata to describe:
+{metadata}
+
+IMPORTANT: Each level must logically contain and expand upon the previous level. Level 7 MUST be the most comprehensive and detailed.
+
+Output ONLY valid JSON in this exact format:
+{{
+  "level_1": "...",
+  "level_2": "...",
+  "level_3": "...",
+  "level_4": "...",
+  "level_5": "...",
+  "level_6": "...",
+  "level_7": "..."
+}}

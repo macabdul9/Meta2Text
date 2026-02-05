@@ -372,33 +372,70 @@ class VLLMEngine(GenerationEngine):
         # Handle image for vision models
         temp_file_path = None
         if self.is_vision and image:
-            # vLLM vision models use multi_modal_data format
+            # For vision models, use the same approach as the working demo
+            try:
+                from transformers import AutoProcessor
+                from qwen_vl_utils import process_vision_info
+            except ImportError:
+                raise ImportError("qwen-vl-utils package not installed. Install with: pip install qwen-vl-utils")
+            
+            # Handle image path
             if isinstance(image, str):
                 from pathlib import Path
                 if not Path(image).exists():
                     raise ValueError(f"Image path does not exist: {image}")
-                image_path = image
+                image_for_message = image
             else:
                 # PIL Image - save temporarily
                 import tempfile
-                import os
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
                 image.save(temp_file.name, format='JPEG')
-                image_path = temp_file.name
+                image_for_message = temp_file.name
                 temp_file.close()
-                temp_file_path = image_path
+                temp_file_path = image_for_message
             
-            # Format for vLLM vision models
-            multimodal_prompt = {
-                "prompt": prompt,
-                "multi_modal_data": {"image": image_path}
+            # Get processor for the model
+            processor = AutoProcessor.from_pretrained(self.model_name)
+            
+            # Format messages according to Qwen-VL requirements (same as demo)
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "image": image_for_message},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ]
+            
+            # Prepare inputs using the same method as the demo
+            text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            image_inputs, video_inputs, video_kwargs = process_vision_info(
+                messages,
+                image_patch_size=processor.image_processor.patch_size,
+                return_video_kwargs=True,
+                return_video_metadata=True
+            )
+            
+            mm_data = {}
+            if image_inputs is not None:
+                mm_data['image'] = image_inputs
+            if video_inputs is not None:
+                mm_data['video'] = video_inputs
+            
+            prompt_for_llm = {
+                'prompt': text,
+                'multi_modal_data': mm_data,
+                'mm_processor_kwargs': video_kwargs
             }
-            prompt_for_llm = multimodal_prompt
         else:
             if image:
                 import warnings
                 warnings.warn("vLLM engine: image input provided but model is not a vision model, using text-only generation")
             prompt_for_llm = prompt
+        
+        # Extract guided_json parameter if provided (not supported in all vLLM versions)
+        guided_json = params.pop('guided_json', None)
         
         sampling_params = SamplingParams(
             temperature=params.get('temperature', 0.7),

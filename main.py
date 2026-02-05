@@ -87,9 +87,32 @@ def parse_args():
     parser.add_argument(
         "--generation_method",
         type=str,
-        choices=["template", "llm_expansion", "vlm_hybrid", "scene_graph", "noise_injection"],
+        choices=["template", "llm_expansion", "vlm_hybrid", "scene_graph", "noise_injection", "hierarchical"],
         default="llm_expansion",
         help="Generation method to use (default: llm_expansion)"
+    )
+    
+    # Hierarchical generation options
+    parser.add_argument(
+        "--num_levels",
+        type=int,
+        default=5,
+        help="Number of hierarchy levels for hierarchical generation (default: 5)"
+    )
+    
+    parser.add_argument(
+        "--hierarchy_direction",
+        type=str,
+        choices=["forward", "backward", "bidirectional"],
+        default="bidirectional",
+        help="Direction for hierarchy completion (default: bidirectional)"
+    )
+    
+    parser.add_argument(
+        "--prompt_template",
+        type=str,
+        default=None,
+        help="Path to custom prompt template file for hierarchical generation"
     )
     
     # Output options
@@ -172,9 +195,16 @@ def main():
     
     # Initialize generation method
     try:
+        method_kwargs = {}
+        if args.generation_method == "hierarchical":
+            method_kwargs['num_levels'] = args.num_levels
+            method_kwargs['direction'] = args.hierarchy_direction
+            method_kwargs['prompt_template'] = args.prompt_template
+        
         method = GenerationMethodFactory.create(
             method_type=args.generation_method,
-            engine=engine
+            engine=engine,
+            **method_kwargs
         )
     except Exception as e:
         print(f"Error initializing generation method: {e}", file=sys.stderr)
@@ -206,11 +236,21 @@ def main():
                 metadata=item['metadata'],
                 image_path=item.get('image_path')
             )
-            results.append({
+            
+            # Handle hierarchical output (dict) vs regular output (str)
+            result_item = {
                 'metadata': item['metadata'],
-                'image_path': item.get('image_path'),
-                'description': description
-            })
+                'image_path': item.get('image_path')
+            }
+            
+            if isinstance(description, dict):
+                # Hierarchical output
+                result_item['hierarchy'] = description
+            else:
+                # Regular string output
+                result_item['description'] = description
+            
+            results.append(result_item)
         
         # Output results
         if args.output_path:
