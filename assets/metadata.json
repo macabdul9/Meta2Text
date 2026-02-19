@@ -1,0 +1,45 @@
+{
+    "opencontext-24-19710547-2009-001jpg-24-19710547-2009-001jpg.jpg":{
+        "title": "Round Stamped Pot",
+        "object": "Pot",
+        "object_type": "Round Stamped Pot",
+        "coverage_period_general": "Iron Age",
+        "temporal_period_1": "Orientalizing (750 BCE - 582 BCE)",
+        "temporal_period_2": "Archaic (580 BCE - 482 BCE)",
+        "temporal_period_3": "Roman Imperial (31 CE - 399 CE)"
+    },
+    "24-19710547-2009-001jpg-24-19710547-2009-001jpg.jpg":{
+        "title": "Italo-Corinthian Plate, 13 Fragments",
+        "object": "Plate",
+        "object_type": "Italo-Corinthian Plate",
+        "fragment_count": 13,
+        "cultural_association": "Etruscan",
+        "coverage_period_general": "Iron Age",
+        "temporal_period_1": "Orientalizing (750 BCE - 582 BCE)",
+        "temporal_period_2": "Archaic (580 BCE - 482 BCE)",
+        "temporal_period_3": "Roman Imperial (31 CE - 399 CE)",
+        "creator": "Anthony Tuck",
+        "associated_site": "Murlo",
+        "subject_1": "Archaeology",
+        "subject_2": "Human settlements",
+        "subject_3": "Subsistence economy",
+        "subject_4": "Architecture"
+    },
+    "opencontext-24-19720075bwjpg-24-19720075bwjpg.jpg":{
+        "title": "Rocchetto Fragment with Stamped Design",
+        "object": "Rocchetto",
+        "object_type": "Rocchetto Fragment",
+        "decoration_type": "Stamped design with asterisk motif",
+        "cultural_association": "Etruscan",
+        "coverage_period_general": "Iron Age",
+        "temporal_period_1": "Orientalizing (750 BCE - 582 BCE)",
+        "temporal_period_2": "Archaic (580 BCE - 482 BCE)",
+        "temporal_period_3": "Roman Imperial (31 CE - 399 CE)",
+        "creator": "Anthony Tuck",
+        "associated_site": "Murlo",
+        "subject_1": "Archaeology",
+        "subject_2": "Human settlements",
+        "subject_3": "Subsistence economy",
+        "subject_4": "Architecture"
+    }
+}

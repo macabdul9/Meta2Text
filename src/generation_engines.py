@@ -343,7 +343,7 @@ class VLLMEngine(GenerationEngine):
         # Initialize vLLM
         # Note: vLLM supports some vision models, but they need more memory
         # Use lower GPU memory utilization for vision models
-        gpu_memory_util = 0.5 if self.is_vision else 0.9
+        gpu_memory_util = 0.7 if self.is_vision else 0.9
         
         if self.is_vision:
             import warnings

@@ -159,11 +159,18 @@ def validate_args(args):
     if args.metadata:
         # Check if it's a file path
         metadata_path = Path(args.metadata)
-        if metadata_path.exists() and metadata_path.is_file():
-            with open(metadata_path, 'r') as f:
-                args.metadata = json.load(f)
-        else:
-            # Try to parse as JSON string
+        try:
+            if metadata_path.exists() and metadata_path.is_file():
+                with open(metadata_path, 'r') as f:
+                    args.metadata = json.load(f)
+            else:
+                # Try to parse as JSON string
+                try:
+                    args.metadata = json.loads(args.metadata)
+                except json.JSONDecodeError:
+                    raise ValueError(f"Invalid JSON in --metadata: {args.metadata}")
+        except OSError:
+            # If the path is too long (e.g., it's actually a JSON string), treat as JSON
             try:
                 args.metadata = json.loads(args.metadata)
             except json.JSONDecodeError:
